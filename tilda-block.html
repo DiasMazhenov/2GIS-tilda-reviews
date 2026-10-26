@@ -1,5 +1,5 @@
 <!-- 2GIS Reviews | Tilda T123: replace data-* settings and paste the complete file -->
-<section class="gis-reviews" data-gis-reviews data-branch-id="YOUR_BRANCH_ID" data-api-key="YOUR_PUBLIC_WIDGET_KEY" data-reviews-url="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" data-title="ОТЗЫВЫ НАШИХ ПАЦИЕНТОВ" data-subtitle="Спасибо за ваше доверие" data-display-limit="6" data-search-limit="200" data-positive-min="4">
+<section class="gis-reviews" data-gis-reviews data-branch-id="YOUR_BRANCH_ID" data-reviews-url="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" data-title="ОТЗЫВЫ НАШИХ ПАЦИЕНТОВ" data-subtitle="Спасибо за ваше доверие" data-display-limit="6" data-search-limit="200" data-positive-min="4">
   <header class="gis-header"><div><p class="gis-label"></p><h2 class="gis-title"></h2></div><a class="gis-link" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a></header>
   <p class="gis-summary" aria-live="polite">Загружаем рейтинг…</p>
   <div class="gis-grid" aria-label="Отзывы"></div>
@@ -41,7 +41,7 @@ document.querySelectorAll('[data-gis-reviews]').forEach(function(root){
 if(root.dataset.initialized)return;
 root.dataset.initialized='1';
 var grid=root.querySelector('.gis-grid'),status=root.querySelector('.gis-status'),summary=root.querySelector('.gis-summary');
-var branch=root.dataset.branchId,key=root.dataset.apiKey,link=root.querySelector('.gis-link');
+var branch=root.dataset.branchId,key=(root.dataset.apiKey || '86fa3d7f-3448-4eb9-860b-09a67b00615e').trim(),link=root.querySelector('.gis-link');
 var limit=num(root.dataset.displayLimit,6,1,30),searchLimit=num(root.dataset.searchLimit,200,1,500),min=num(root.dataset.positiveMin,4,1,5);
 var marker=document.querySelector('[data-gis-doctor-reviews]');
 var doctorNode=marker&&document.querySelector(marker.dataset.doctorSelector||'.doctor');
@@ -53,8 +53,8 @@ var pageSize=doctorMode?50:Math.max(12,limit,step);
 root.querySelector('.gis-title').textContent=root.dataset.title||'Отзывы';
 root.querySelector('.gis-label').textContent=root.dataset.subtitle||'';
 if(/^https:\/\/(www\.)?2gis\./i.test(root.dataset.reviewsUrl||''))link.href=root.dataset.reviewsUrl;else link.hidden=true;
-if(!/^\d+$/.test(branch||'')||!key||key.startsWith('YOUR_')){
-summary.textContent='Отзывы в 2ГИС';status.textContent='Настройте data-branch-id и data-api-key в HTML блока.';return;
+if(!/^\d+$/.test(branch||'')){
+summary.textContent='Отзывы в 2ГИС';status.textContent='Укажите числовой ID филиала в data-branch-id.';return;
 }
 function num(s,d,lo,hi){var x=Number(s);return Number.isInteger(x)&&x>=lo&&x<=hi?x:d;}
 function words(s){return String(s||'').toLocaleLowerCase('ru').replace(/ё/g,'е').replace(/[^\p{L}\p{N}]+/gu,' ').trim().split(' ').filter(Boolean);}
@@ -150,7 +150,7 @@ async function load(initial){
   }catch(error){
     console.error('[2GIS Reviews]',error);
     if(!grid.children.length)summary.textContent='Отзывы в 2ГИС';
-    status.textContent='Не удалось загрузить отзывы. Посмотрите их по ссылке на 2ГИС.';
+    status.textContent=(/HTTP (401|403)/.test(String(e)) ? '2ГИС отклонил запрос. Возможно, ключ виджета больше не действует для этого сайта. Укажите разрешённый ключ через data-api-key. ' : 'Не удалось загрузить отзывы. ') + 'Посмотрите их по ссылке на 2ГИС.';
     if(!grid.children.length)moreButton.hidden=true;
   }finally{
     busy=false;
