@@ -51,10 +51,15 @@ var grid=root.querySelector('.cr-grid'),status=root.querySelector('.cr-status'),
 var iconUrl='https://cdn.jsdelivr.net/gh/DiasMazhenov/2GIS-tilda-reviews@main/assets/2gis-icon.webp';
 var branch=root.dataset.branchId,key=(root.dataset.apiKey || '86fa3d7f-3448-4eb9-860b-09a67b00615e').trim(),link=root.querySelector('.cr-link');
 var limit=num(root.dataset.displayLimit,6,1,30),searchLimit=num(root.dataset.searchLimit,200,1,500),min=num(root.dataset.positiveMin,4,1,5);
-var marker=document.querySelector('[data-gis-doctor-reviews]');
-var doctorNode=marker&&document.querySelector(marker.dataset.doctorSelector||'.doctor');
-var doctorName=marker?(marker.dataset.doctorName||(doctorNode&&doctorNode.textContent)||'').trim():'';
-var doctorMode=Boolean(doctorName),busy=false;
+// Doctor mode: a marker is optional when the doctor's name has class .doctor.
+// Tilda Zero Block often puts the class on a wrapper with text inside .tn-atom.
+var marker=document.querySelector('[data-gis-doctor-reviews], [data-cr-doctor-reviews]');
+var selector=marker?.dataset.doctorSelector || '.doctor';
+var doctorNode=document.querySelector(selector);
+var doctorName=(marker?.dataset.doctorName || doctorNode?.querySelector('.tn-atom')?.textContent || doctorNode?.textContent || '').replace(/\s+/g,' ').trim();
+var doctorMode=Boolean(doctorName && (marker || doctorNode)),busy=false;
+if(marker&&!doctorMode)console.warn('[2GIS Reviews] Маркер врача найден, но ФИО не определено. Проверьте класс .doctor или data-doctor-name.');
+if(doctorMode)console.info('[2GIS Reviews] Включён поиск упоминаний врача:',doctorName);
 var moreButton=root.querySelector('.cr-load-more'), step=3, shown=limit;
 var loaded=[], seen=new Set(), cursor=0, exhausted=false, partial=false, fallback=false, meta=null;
 var pageSize=doctorMode?50:Math.max(12,limit,step);
