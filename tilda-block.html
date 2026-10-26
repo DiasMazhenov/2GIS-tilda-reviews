@@ -7,7 +7,7 @@
   </header>
   <p class="cr-summary" aria-live="polite">Загружаем рейтинг…</p>
   <div class="cr-grid" aria-label="Последние отзывы" tabindex="0"></div>
-  <div class="cr-actions"><button type="button" class="cr-load-more" hidden>Загрузить ещё 3 <span aria-hidden="true">↓</span></button></div>
+  <div class="cr-actions"><button type="button" class="cr-load-more" hidden>Загрузить еще <span aria-hidden="true">↓</span></button></div>
   <p class="cr-status" role="status">Загружаем отзывы из 2ГИС…</p>
   <p class="cr-note">Отзывы из 2ГИС · последние доступные отзывы с оценкой</p>
 </section>
@@ -196,7 +196,7 @@ async function load(initial){
   }finally{
     busy=false;
     moreButton.disabled=false;
-    moreButton.innerHTML='Загрузить ещё 3 <span aria-hidden="true">↓</span>';
+    moreButton.innerHTML='Загрузить еще <span aria-hidden="true">↓</span>';
   }
 }
 moreButton.addEventListener('click',async function(){
