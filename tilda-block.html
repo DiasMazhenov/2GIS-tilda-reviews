@@ -76,6 +76,25 @@ return /(вич|вна|ична|оглы|кызы)$/.test(p[1])?[p[0],p[2]]:[p[1
 var doctorTokens=tokens();
 function same(a,b){if(a===b)return true;if(b.length<5)return false;var stem=b.slice(0,-(b.length>=7?2:1));return a.startsWith(stem)&&Math.abs(a.length-b.length)<=2;}
 function matches(r){var text=words(r.text);return doctorTokens.some(function(t){return text.some(function(w){return same(w,t);});});}
+function highlightDoctor(textNode, reviewText){
+  // Only highlight the doctor's name on doctor pages.
+  if(!doctorMode || !doctorTokens.length)return;
+  var pattern=/[\\p{L}\\p{N}]+/gu,match,last=0,parts=[],found=false;
+  while((match=pattern.exec(reviewText))!==null){
+    var word=match[0].toLocaleLowerCase('ru').replace(/ё/g,'е');
+    if(!doctorTokens.some(function(token){return same(word,token);}))continue;
+    if(match.index>last)parts.push(document.createTextNode(reviewText.slice(last,match.index)));
+    var strong=document.createElement('strong');
+    strong.textContent=match[0];
+    parts.push(strong);
+    last=match.index+match[0].length;
+    found=true;
+  }
+  if(found){
+    if(last<reviewText.length)parts.push(document.createTextNode(reviewText.slice(last)));
+    textNode.replaceChildren(...parts);
+  }
+}
 function valid(r){return r&&!r.is_hidden&&!r.hiding_reason&&typeof r.text==='string'&&Boolean(r.text.trim());}
 function positive(r){return valid(r)&&Number(r.rating)>=min;}
 function el(tag,cls,txt){var n=document.createElement(tag);n.className=cls;n.textContent=txt||'';return n;}
@@ -85,7 +104,7 @@ var date=new Date(r.date_created);
 if(!Number.isNaN(date.getTime())){var t=el('time','cr-date',date.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}));t.dateTime=date.toISOString();c.append(t);}
 var rating=Number(r.rating);
 if(Number.isInteger(rating)&&rating>=1&&rating<=5){var s=el('p','cr-stars','★'.repeat(rating)+'☆'.repeat(5-rating));s.setAttribute('aria-label',rating+' из 5');c.append(s);}
-var p=el('p','cr-text cr-short',r.text);c.append(p);
+var p=el('p','cr-text cr-short',r.text);highlightDoctor(p,r.text);c.append(p);
 var button=el('button','cr-more','Читать полностью');button.type='button';button.hidden=true;button.setAttribute('aria-expanded','false');
 button.addEventListener('click',function(){var short=p.classList.toggle('cr-short');button.textContent=short?'Читать полностью':'Свернуть';button.setAttribute('aria-expanded',String(!short));});c.append(button);return c;
 }
