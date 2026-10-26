@@ -1,8 +1,9 @@
 <!-- БЛОК ОТЗЫВОВ 2GIS: целиком вставить в Tilda T123 -->
-<section class="clinic-reviews" data-clinic-reviews data-branch-id="YOUR_BRANCH_ID" data-reviews-url="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" data-display-limit="6" data-search-limit="200" data-positive-min="4" aria-label="Отзывы о клинике">
+<!-- НАСТРОЙКА: ЗАМЕНИТЕ YOUR_BRANCH_ID НИЖЕ НА ЧИСЛОВОЙ ID ФИЛИАЛА 2ГИС. ТОЛЬКО В ОДНОМ МЕСТЕ! -->
+<section class="clinic-reviews" data-clinic-reviews data-branch-id="YOUR_BRANCH_ID" data-display-limit="6" data-search-limit="200" data-positive-min="4" aria-label="Отзывы о клинике">
   <header class="cr-header">
     <div><p class="cr-label">Спасибо за ваше доверие</p><h2>ОТЗЫВЫ НАШИХ ПАЦИЕНТОВ</h2></div>
-    <a class="cr-link" href="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a>
+    <a class="cr-link" href="https://2gis.kz/" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a>
   </header>
   <p class="cr-summary" aria-live="polite">Загружаем рейтинг…</p>
   <div class="cr-grid" aria-label="Последние отзывы" tabindex="0"></div>
@@ -59,7 +60,7 @@ var loaded=[], seen=new Set(), cursor=0, exhausted=false, partial=false, fallbac
 var pageSize=doctorMode?50:Math.max(12,limit,step);
 if(root.dataset.title)root.querySelector('.cr-header h2').textContent=root.dataset.title;
 if(root.dataset.subtitle)root.querySelector('.cr-label').textContent=root.dataset.subtitle;
-if(/^https:\/\/(www\.)?2gis\./i.test(root.dataset.reviewsUrl||''))link.href=root.dataset.reviewsUrl;else link.hidden=true;
+if(/^\d+$/.test(branch||''))link.href='https://2gis.kz/firm/'+encodeURIComponent(branch)+'/tab/reviews';else link.hidden=true;
 if(!/^\d+$/.test(branch||'')){
 summary.textContent='Отзывы в 2ГИС';status.textContent='Укажите числовой ID филиала в data-branch-id.';return;
 }
