@@ -3,6 +3,7 @@
   <header class="gis-header"><div><p class="gis-label"></p><h2 class="gis-title"></h2></div><a class="gis-link" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a></header>
   <p class="gis-summary" aria-live="polite">Загружаем рейтинг…</p>
   <div class="gis-grid" aria-label="Отзывы"></div>
+  <div class="gis-actions"><button type="button" class="gis-load-more" hidden>Загрузить ещё 3 <span aria-hidden="true">↓</span></button></div>
   <p class="gis-status" role="status">Загружаем отзывы…</p>
   <p class="gis-note">Отзывы из 2ГИС · последние доступные отзывы</p>
 </section>
@@ -22,6 +23,11 @@
 .gis-text{margin:0;font-size:18px;line-height:1.3;white-space:pre-wrap;overflow-wrap:anywhere}
 .gis-text.short{display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden}
 .gis-more{margin-top:12px;padding:4px 0;border:0;background:none;color:var(--gis-accent);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer}
+.gis-actions{display:flex;justify-content:center;margin-top:26px}
+.gis-load-more{appearance:none;cursor:pointer;border:1px solid var(--gis-accent);color:var(--gis-accent);background:transparent;border-radius:100px;padding:13px 27px;font:600 15px/1.3 Arial,sans-serif;transition:background .2s,color .2s,opacity .2s}
+.gis-load-more:hover{background:var(--gis-accent);color:#fff}
+.gis-load-more:disabled{opacity:.55;cursor:wait}
+.gis-load-more[hidden]{display:none}
 .gis-note,.gis-status{font-size:12px;line-height:1.5;color:#687970;margin:20px 0 0}
 .gis-reviews :focus-visible{outline:2px solid var(--gis-accent);outline-offset:4px}
 @media(max-width:900px){.gis-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -41,6 +47,9 @@ var marker=document.querySelector('[data-gis-doctor-reviews]');
 var doctorNode=marker&&document.querySelector(marker.dataset.doctorSelector||'.doctor');
 var doctorName=marker?(marker.dataset.doctorName||(doctorNode&&doctorNode.textContent)||'').trim():'';
 var doctorMode=Boolean(doctorName),busy=false;
+var moreButton=root.querySelector('.gis-load-more'), step=3, shown=limit;
+var loaded=[], seen=new Set(), cursor=0, exhausted=false, partial=false, fallback=false, meta=null;
+var pageSize=doctorMode?50:Math.max(12,limit,step);
 root.querySelector('.gis-title').textContent=root.dataset.title||'Отзывы';
 root.querySelector('.gis-label').textContent=root.dataset.subtitle||'';
 if(/^https:\/\/(www\.)?2gis\./i.test(root.dataset.reviewsUrl||''))link.href=root.dataset.reviewsUrl;else link.hidden=true;
@@ -75,32 +84,89 @@ try{var response=await fetch('https://public-api.reviews.2gis.com/2.0/branches/'
 if(!response.ok)throw Error('HTTP '+response.status);var data=await response.json();if(!Array.isArray(data.reviews)||data.meta?.code!==200)throw Error('Invalid response');return data;
 }finally{clearTimeout(timer);}
 }
-async function load(){
-if(busy||!root.isConnected)return;busy=true;
-if(!grid.children.length)status.textContent='Загружаем отзывы…';
-try{
-var all=[],seen=new Set(),meta=null,perPage=doctorMode?50:Math.max(6,limit),total=doctorMode?searchLimit:perPage;
-for(var offset=0;offset<total;offset+=perPage){
-var data;
-try{data=await fetchPage(offset,Math.min(perPage,total-offset));}
-catch(e){if(!meta)throw e;console.warn('[2GIS Reviews] Частичная загрузка',e);break;}
-if(!meta)meta=data.meta;
-var added=0;data.reviews.forEach(function(r){if(!valid(r))return;var id=String(r.id||(r.date_created+':'+r.text));if(!seen.has(id)){seen.add(id);all.push(r);added++;}});
-if(data.reviews.length<Math.min(perPage,total-offset)||!added)break;
-if(doctorMode&&all.filter(matches).length>=limit)break;
+function reviewId(r){return String(r.id||(r.date_created+':'+(r.user?.name||'')+':'+r.text));}
+function selectedReviews(){
+  var relevant=doctorMode?loaded.filter(matches):loaded.filter(valid);
+  fallback=doctorMode&&relevant.length===0;
+  return fallback?loaded.filter(positive):relevant;
 }
-var selected=doctorMode?all.filter(matches):all.filter(valid),fallback=doctorMode&&!selected.length;
-if(fallback)selected=all.filter(positive);
-selected=selected.slice(0,limit);grid.replaceChildren(...selected.map(card));
-var rating=Number(meta.branch_rating),count=meta.branch_reviews_count;
-summary.textContent=Number.isFinite(rating)&&meta.branch_rating!=null?'★ '+rating.toLocaleString('ru-RU')+' из 5'+(Number.isInteger(count)?' · Отзывов: '+count:'')+' · 2ГИС':'Отзывы в 2ГИС';
-requestAnimationFrame(resize);
-status.textContent=fallback?'Упоминания врача не найдены среди проверенных отзывов. Показаны отзывы клиники с оценкой '+min+'–5.':doctorMode&&selected.length?'Отзывы с упоминанием: '+doctorName:selected.length?'':'Текстовых отзывов не найдено.';
-}catch(e){console.error('[2GIS Reviews]',e);if(!grid.children.length)summary.textContent='Отзывы в 2ГИС';status.textContent='Не удалось загрузить отзывы. Посмотрите их по ссылке на 2ГИС.';}
-finally{busy=false;}
+async function fill(minWanted){
+  // Для страниц врача сканируем до searchLimit, чтобы найти упоминания.
+  var maximum=doctorMode?searchLimit:Math.max(searchLimit,minWanted);
+  while(!exhausted&&cursor<maximum){
+    var requested=Math.min(pageSize,maximum-cursor),data;
+    try{data=await fetchPage(cursor,requested);}
+    catch(error){
+      if(!meta)throw error;
+      partial=true;exhausted=true;
+      console.warn('[2GIS Reviews] Частичная загрузка',error);
+      break;
+    }
+    if(!meta)meta=data.meta;
+    cursor+=requested;
+    var newIds=0;
+    data.reviews.forEach(function(r){
+      if(!valid(r))return;
+      var id=reviewId(r);
+      if(seen.has(id))return;
+      seen.add(id);loaded.push(r);newIds++;
+    });
+    if(data.reviews.length<requested||newIds===0)exhausted=true;
+    // В режиме врача дочитываем заданный лимит (включая ситуацию
+    // когда пока нет упоминаний). На обычных страницах подгружаем по мере кликов.
+    if(!doctorMode&&selectedReviews().length>=minWanted)break;
+  }
 }
-load();window.addEventListener('resize',resize);
-var refresh=setInterval(function(){if(!root.isConnected){clearInterval(refresh);return;}if(!document.hidden&&!root.contains(document.activeElement))load();},300000);
+function draw(){
+  var available=selectedReviews(),visible=available.slice(0,shown);
+  grid.replaceChildren(...visible.map(card));
+  requestAnimationFrame(resize);
+  if(meta){
+    var rating=Number(meta.branch_rating),count=meta.branch_reviews_count;
+    summary.textContent=Number.isFinite(rating)&&meta.branch_rating!=null
+      ? '★ '+rating.toLocaleString('ru-RU')+' из 5'+(Number.isInteger(count)?' · Отзывов: '+count:'')+' · 2ГИС'
+      : 'Отзывы в 2ГИС';
+  }
+  // Не обещаем дополнительную порцию, когда данных больше нет.
+  moreButton.hidden=!(available.length>shown||(!exhausted&&!doctorMode));
+  status.textContent=fallback
+    ? 'Упоминания врача не найдены среди проверенных отзывов. Показаны отзывы клиники с оценкой '+min+'–5.'
+    : doctorMode&&visible.length?'Отзывы с упоминанием: '+doctorName
+    : visible.length?'':'Текстовых отзывов не найдено.';
+}
+async function load(initial){
+  if(busy||!root.isConnected)return;
+  busy=true;
+  moreButton.disabled=true;
+  moreButton.textContent='Загружаем…';
+  if(!grid.children.length)status.textContent='Загружаем отзывы…';
+  try{
+    if(initial){
+      // При периодическом обновлении сохраняем число раскрытых карточек.
+      loaded=[];seen=new Set();cursor=0;exhausted=false;partial=false;meta=null;
+    }
+    await fill(shown+(doctorMode?0:1));
+    draw();
+  }catch(error){
+    console.error('[2GIS Reviews]',error);
+    if(!grid.children.length)summary.textContent='Отзывы в 2ГИС';
+    status.textContent='Не удалось загрузить отзывы. Посмотрите их по ссылке на 2ГИС.';
+    if(!grid.children.length)moreButton.hidden=true;
+  }finally{
+    busy=false;
+    moreButton.disabled=false;
+    moreButton.innerHTML='Загрузить ещё 3 <span aria-hidden="true">↓</span>';
+  }
+}
+moreButton.addEventListener('click',async function(){
+  if(busy)return;
+  // Кнопка добавляет ровно до 3 карточек к уже показанным.
+  shown+=step;
+  await load(false);
+});
+load(true);
+window.addEventListener('resize',resize);
+var refresh=setInterval(function(){if(!root.isConnected){clearInterval(refresh);return;}if(!document.hidden&&!root.contains(document.activeElement))load(true);},300000);
 });
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
