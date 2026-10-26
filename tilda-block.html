@@ -1,11 +1,14 @@
-<!-- 2GIS Reviews | Tilda T123: replace data-* settings and paste the complete file -->
-<section class="clinic-reviews" data-clinic-reviews data-branch-id="YOUR_BRANCH_ID" data-reviews-url="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" data-title="ОТЗЫВЫ НАШИХ ПАЦИЕНТОВ" data-subtitle="Спасибо за ваше доверие" data-display-limit="6" data-search-limit="200" data-positive-min="4">
-  <header class="cr-header"><div><p class="cr-label"></p><h2 class="cr-title"></h2></div><a class="cr-link" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a></header>
+<!-- БЛОК ОТЗЫВОВ 2GIS: целиком вставить в Tilda T123 -->
+<section class="clinic-reviews" data-clinic-reviews data-branch-id="YOUR_BRANCH_ID" data-reviews-url="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" data-display-limit="6" data-search-limit="200" data-positive-min="4" aria-label="Отзывы о клинике">
+  <header class="cr-header">
+    <div><p class="cr-label">Спасибо за ваше доверие</p><h2>ОТЗЫВЫ НАШИХ ПАЦИЕНТОВ</h2></div>
+    <a class="cr-link" href="https://2gis.kz/firm/YOUR_BRANCH_ID/tab/reviews" target="_blank" rel="noopener noreferrer">Все отзывы в 2ГИС ↗</a>
+  </header>
   <p class="cr-summary" aria-live="polite">Загружаем рейтинг…</p>
-  <div class="cr-grid" aria-label="Отзывы"></div>
+  <div class="cr-grid" aria-label="Последние отзывы" tabindex="0"></div>
   <div class="cr-actions"><button type="button" class="cr-load-more" hidden>Загрузить ещё 3 <span aria-hidden="true">↓</span></button></div>
-  <p class="cr-status" role="status">Загружаем отзывы…</p>
-  <p class="cr-note">Отзывы из 2ГИС · последние доступные отзывы</p>
+  <p class="cr-status" role="status">Загружаем отзывы из 2ГИС…</p>
+  <p class="cr-note">Отзывы из 2ГИС · последние доступные отзывы с оценкой</p>
 </section>
 <style>
  .clinic-reviews{--cr-accent:#24785e;box-sizing:border-box;max-width:1160px;margin:0 auto;padding:48px 24px;font-family:var(--t-text-font, Arial);color:#203b32;background:#faf3e1;border-radius:24px}
@@ -44,6 +47,7 @@ document.querySelectorAll('[data-clinic-reviews]').forEach(function(root){
 if(root.dataset.initialized)return;
 root.dataset.initialized='1';
 var grid=root.querySelector('.cr-grid'),status=root.querySelector('.cr-status'),summary=root.querySelector('.cr-summary');
+var iconUrl='https://cdn.jsdelivr.net/gh/DiasMazhenov/2GIS-tilda-reviews@main/assets/2gis-icon.webp';
 var branch=root.dataset.branchId,key=(root.dataset.apiKey || '86fa3d7f-3448-4eb9-860b-09a67b00615e').trim(),link=root.querySelector('.cr-link');
 var limit=num(root.dataset.displayLimit,6,1,30),searchLimit=num(root.dataset.searchLimit,200,1,500),min=num(root.dataset.positiveMin,4,1,5);
 var marker=document.querySelector('[data-gis-doctor-reviews]');
@@ -53,8 +57,8 @@ var doctorMode=Boolean(doctorName),busy=false;
 var moreButton=root.querySelector('.cr-load-more'), step=3, shown=limit;
 var loaded=[], seen=new Set(), cursor=0, exhausted=false, partial=false, fallback=false, meta=null;
 var pageSize=doctorMode?50:Math.max(12,limit,step);
-root.querySelector('.cr-title').textContent=root.dataset.title||'Отзывы';
-root.querySelector('.cr-label').textContent=root.dataset.subtitle||'';
+if(root.dataset.title)root.querySelector('.cr-header h2').textContent=root.dataset.title;
+if(root.dataset.subtitle)root.querySelector('.cr-label').textContent=root.dataset.subtitle;
 if(/^https:\/\/(www\.)?2gis\./i.test(root.dataset.reviewsUrl||''))link.href=root.dataset.reviewsUrl;else link.hidden=true;
 if(!/^\d+$/.test(branch||'')){
 summary.textContent='Отзывы в 2ГИС';status.textContent='Укажите числовой ID филиала в data-branch-id.';return;
@@ -126,9 +130,11 @@ function draw(){
   requestAnimationFrame(resize);
   if(meta){
     var rating=Number(meta.branch_rating),count=meta.branch_reviews_count;
-    summary.textContent=Number.isFinite(rating)&&meta.branch_rating!=null
-      ? '★ '+rating.toLocaleString('ru-RU')+' из 5'+(Number.isInteger(count)?' · Отзывов: '+count:'')+' · 2ГИС'
-      : 'Отзывы в 2ГИС';
+    var icon=document.createElement('img');icon.className='dg-icon';icon.src=iconUrl;icon.alt='2ГИС';
+    var ratingText=Number.isFinite(rating)&&meta.branch_rating!=null
+      ? ' '+rating.toLocaleString('ru-RU')+' из 5'+(Number.isInteger(count)?' · Отзывов: '+count:'')+' · 2ГИС'
+      : ' Отзывы в 2ГИС';
+    summary.replaceChildren(icon,document.createTextNode(ratingText));
   }
   // Не обещаем дополнительную порцию, когда данных больше нет.
   moreButton.hidden=!(available.length>shown||(!exhausted&&!doctorMode));
