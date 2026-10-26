@@ -79,7 +79,7 @@ function matches(r){var text=words(r.text);return doctorTokens.some(function(t){
 function highlightDoctor(textNode, reviewText){
   // Only highlight the doctor's name on doctor pages.
   if(!doctorMode || !doctorTokens.length)return;
-  var pattern=/[\\p{L}\\p{N}]+/gu,match,last=0,parts=[],found=false;
+  var pattern=/[\p{L}\p{N}]+/gu,match,last=0,parts=[],found=false;
   while((match=pattern.exec(reviewText))!==null){
     var word=match[0].toLocaleLowerCase('ru').replace(/ё/g,'е');
     if(!doctorTokens.some(function(token){return same(word,token);}))continue;
