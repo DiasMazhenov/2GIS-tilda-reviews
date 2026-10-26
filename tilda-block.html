@@ -74,6 +74,13 @@ function words(s){return String(s||'').toLocaleLowerCase('ru').replace(/ё/g,'е
 function tokens(){var p=words(doctorName);if(p.length<3)return p;
 return /(вич|вна|ична|оглы|кызы)$/.test(p[1])?[p[0],p[2]]:[p[1],p[0]];}
 var doctorTokens=tokens();
+function syncDoctor(){
+  var el=document.querySelector('.doctor');
+  var name=(document.querySelector('[data-gis-doctor-reviews]')?.dataset.doctorName || el?.querySelector('.tn-atom')?.textContent || el?.textContent || '').trim();
+  if(!name || name===doctorName)return false;
+  doctorName=name;doctorMode=true;doctorTokens=tokens();pageSize=50;
+  return true;
+}
 function same(a,b){if(a===b)return true;if(b.length<5)return false;var stem=b.slice(0,-(b.length>=7?2:1));return a.startsWith(stem)&&Math.abs(a.length-b.length)<=2;}
 function matches(r){var text=words(r.text);return doctorTokens.some(function(t){return text.some(function(w){return same(w,t);});});}
 function highlightDoctor(textNode, reviewText){
@@ -199,6 +206,10 @@ moreButton.addEventListener('click',async function(){
   await load(false);
 });
 load(true);
+var attempts=0,doctorTimer=setInterval(function(){
+  if(!root.isConnected || ++attempts>20){clearInterval(doctorTimer);return;}
+  if(syncDoctor()){clearInterval(doctorTimer);load(true);}
+},500);
 window.addEventListener('resize',resize);
 var refresh=setInterval(function(){if(!root.isConnected){clearInterval(refresh);return;}if(!document.hidden&&!root.contains(document.activeElement))load(true);},300000);
 });
