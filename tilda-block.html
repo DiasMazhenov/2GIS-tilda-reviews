@@ -197,10 +197,9 @@ function draw(){
   }
   // Не обещаем дополнительную порцию, когда данных больше нет.
   moreButton.hidden=!(available.length>shown||(!exhausted&&!doctorMode));
-  status.textContent=fallback
-    ? 'Упоминания врача не найдены среди проверенных отзывов. Показаны отзывы клиники с оценкой '+min+'–5.'
-    : doctorMode&&visible.length?'Отзывы с упоминанием: '+doctorName
-    : visible.length?'':'Текстовых отзывов не найдено.';
+  status.textContent=fallback ? '' :
+    doctorMode&&visible.length ? 'Отзывы с упоминанием: '+doctorName :
+    visible.length ? '' : 'Текстовых отзывов не найдено.';
 }
 async function load(initial){
   if(busy||!root.isConnected)return;
