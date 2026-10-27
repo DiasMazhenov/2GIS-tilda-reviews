@@ -82,7 +82,34 @@ function syncDoctor(){
   return true;
 }
 function same(a,b){if(a===b)return true;if(b.length<5)return false;var stem=b.slice(0,-(b.length>=7?2:1));return a.startsWith(stem)&&Math.abs(a.length-b.length)<=2;}
-function matches(r){var text=words(r.text);return doctorTokens.some(function(t){return text.some(function(w){return same(w,t);});});}
+// Не считаем одно имя доказательством, что отзыв относится к врачу.
+// Для ФИО: фамилия сама по себе, либо имя + отчество рядом.
+// Для двух слов: нужны обе части рядом.
+function matches(r){
+  var w=words(r.text),p=words(doctorName);
+  if(!p.length)return false;
+  var patron=function(x){return /(вич|вна|ична|оглы|кызы|улы|улы|қызы)$/.test(x);};
+  var surname='',name='',middle='';
+  if(p.length>=3){
+    if(patron(p[1])){name=p[0];middle=p[1];surname=p[2];}
+    else{surname=p[0];name=p[1];middle=p[2];}
+  }else if(p.length===2){surname=p[0];name=p[1];}
+  else{surname=p[0];}
+  var hasSurname=Boolean(surname)&&w.some(function(x){return same(x,surname);});
+  var near=function(a,b){
+    if(!a||!b)return false;
+    for(var i=0;i<w.length;i++){
+      if(!same(w[i],a))continue;
+      for(var j=Math.max(0,i-2);j<=Math.min(w.length-1,i+2);j++){
+        if(i!==j&&same(w[j],b))return true;
+      }
+    }
+    return false;
+  };
+  if(p.length===1)return false; // одно имя неоднозначно
+  if(p.length===2)return near(surname,name);
+  return hasSurname || near(name,middle);
+}
 function highlightDoctor(textNode, reviewText){
   // Only highlight the doctor's name on doctor pages.
   if(!doctorMode || !doctorTokens.length)return;
