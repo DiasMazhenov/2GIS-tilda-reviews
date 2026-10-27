@@ -4,6 +4,18 @@
 
 > Неофициальная интеграция. Публичный endpoint виджета 2ГИС, его ключ, CORS, пагинация и правила использования могут изменяться. Проверяйте право на отображение и выборочную фильтрацию отзывов на коммерческом сайте.
 
+## Подключение через CDN (рекомендуется)
+
+Чтобы не заменять JavaScript в Tilda после каждого обновления, используйте [tilda-cdn.html](./tilda-cdn.html). Скопируйте содержимое файла целиком в T123, заменив `YOUR_BRANCH_ID` только в одном месте. В этом варианте HTML и исходные CSS-стили остаются в Tilda, а JavaScript загружается по адресу:
+
+```html
+<script defer src="https://cdn.jsdelivr.net/gh/DiasMazhenov/2GIS-tilda-reviews@main/dist/reviews.js"></script>
+```
+
+**Не подключайте** `tilda-block.html` через `<script src>`: этот файл содержит разметку и CSS, а не один JavaScript. Для CDN нужен `dist/reviews.js`.
+
+Изменение `dist/reviews.js` в GitHub распространяется через jsDelivr не мгновенно, поскольку CDN кэширует файлы, в том числе по ссылке с `@main`. Для контролируемых выпусков лучше использовать теги версий. Изменения стилей в `tilda-cdn.html` не обновятся на Tilda автоматически: CSS остаётся локальным. Также важно синхронизировать `dist/reviews.js` с логикой из `tilda-block.html` при будущих правках.
+
 ## Установка за 3 шага
 
 1. Откройте [tilda-block.html](./tilda-block.html), скопируйте **весь** файл и вставьте в блок **T123 → HTML** в Tilda. При необходимости сделайте блок сквозным стандартными средствами Tilda.
@@ -97,6 +109,8 @@
 ## Файлы
 
 - [tilda-block.html](./tilda-block.html) — полный код T123 (HTML + CSS + JS).
+- [tilda-cdn.html](./tilda-cdn.html) — T123 с HTML, CSS и подключением внешнего JS.
+- [dist/reviews.js](./dist/reviews.js) — JavaScript для CDN.
 - [examples/doctor-marker.html](./examples/doctor-marker.html) — маркеры режима врача.
 
 ### Правовая оговорка
